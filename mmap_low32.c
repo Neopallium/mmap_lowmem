@@ -38,7 +38,7 @@ static void *mmap_low32_sbrk(ptrdiff_t incr);
 #define MBYTE (KBYTE * 1024)
 #define GBYTE (MBYTE * 1024)
 
-#define ENABLE_VERBOSE 0
+#define ENABLE_VERBOSE 1
 
 #if (ENABLE_VERBOSE != 1)
 #define printf(...)
@@ -121,6 +121,11 @@ static void *mmap_low32_sbrk(ptrdiff_t incr) {
 	void *mem = brk_ptr;
 	brk_ptr += incr;
 	if(incr >= 0) {
+		if(brk_ptr > region_end) {
+			brk_ptr -= incr;
+			errno = ENOMEM;
+			return MAP_FAILED;
+		}
 		if(brk_ptr > next_page) {
 			size_t len = brk_ptr - next_page;
 			len = (len & ~(sys_pagesize - 1)) + sys_pagesize;
@@ -136,7 +141,6 @@ static void *mmap_low32_sbrk(ptrdiff_t incr) {
 		size_t len;
 		next_page = (uint8_t *)(((ptrdiff_t)brk_ptr) & ~(sys_pagesize - 1)) + sys_pagesize;
 		len = old_next_page - next_page;
-printf("------ trim pages: old=%p, new=%p, len=%zd\n", old_next_page, next_page, len);
 		/* release the pages. */
 		if(sys_munmap(next_page, len)) {
 			perror("mmap_low32_sbrk() munmap failed");
@@ -164,6 +168,9 @@ void *mmap_low32(void *addr, size_t length, int prot, int flags, int fd, off64_t
 	}
 #else
 	mem = dlvalloc(length);
+	if(mem == NULL) {
+		return MAP_FAILED;
+	}
 	PAGE_ALIGN_CHECK(dlvalloc, mem);
 #endif
 	return mem;
@@ -195,6 +202,9 @@ void *mremap(void *old_addr, size_t old_size, size_t new_size, int flags, void *
 		if(mem == 0) {
 			/* need to move memory. */
 			mem = dlvalloc(new_size); /* allocate new. */
+			if(mem == NULL) {
+				return MAP_FAILED;
+			}
 			/* copy data old to new. */
 			if(old_size < new_size) {
 				memcpy(mem, old_addr, old_size);
