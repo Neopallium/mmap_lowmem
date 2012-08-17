@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-#CC=gcc
-CC=clang
+CC=gcc
+#CC=clang
 
 CFLAGS=" -g -Wall -Wno-unused-variable"
 
