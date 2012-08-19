@@ -17,8 +17,8 @@
 #define USE_DLMALLOC 1
 
 #if USE_DLMALLOC
-static void *mmap_low32_sbrk(ptrdiff_t incr);
-#define MORECORE                  mmap_low32_sbrk
+static void *mmap_lowmem_sbrk(ptrdiff_t incr);
+#define MORECORE                  mmap_lowmem_sbrk
 #define USE_DL_PREFIX
 #define MSPACES                   0
 #define HAVE_MORECORE             1
@@ -79,7 +79,7 @@ static uint8_t *region_end = NULL;
 
 #define M_FLAGS (MAP_PRIVATE|MAP_ANONYMOUS)
 
-void mmap_low32_init() {
+void mmap_lowmem_init() {
 
 	is_initialized = 1;
 	sys_mmap = (mmap_t)dlsym(RTLD_NEXT, "mmap");
@@ -114,10 +114,10 @@ void mmap_low32_init() {
 getc(stdin);
 #endif
 }
-#define INIT if(is_initialized == 0) mmap_low32_init()
+#define INIT if(is_initialized == 0) mmap_lowmem_init()
 
 #if USE_DLMALLOC
-static void *mmap_low32_sbrk(ptrdiff_t incr) {
+static void *mmap_lowmem_sbrk(ptrdiff_t incr) {
 	void *mem = brk_ptr;
 	brk_ptr += incr;
 	if(incr >= 0) {
@@ -131,7 +131,7 @@ static void *mmap_low32_sbrk(ptrdiff_t incr) {
 			len = (len & ~(sys_pagesize - 1)) + sys_pagesize;
 			/* need to extand accessible memory range. */
 			if(mprotect(next_page, len, PROT_READ|PROT_WRITE)) {
-				perror("mmap_low32_sbrk() mprotect failed");
+				perror("mmap_lowmem_sbrk() mprotect failed");
 			}
 			next_page += len;
 		}
@@ -143,18 +143,18 @@ static void *mmap_low32_sbrk(ptrdiff_t incr) {
 		len = old_next_page - next_page;
 		/* release the pages. */
 		if(sys_munmap(next_page, len)) {
-			perror("mmap_low32_sbrk() munmap failed");
+			perror("mmap_lowmem_sbrk() munmap failed");
 		}
 		/* re-protect the pages. */
 		if(sys_mmap(next_page, len, PROT_NONE, M_FLAGS, -1, 0) == MAP_FAILED) {
-			perror("mmap_low32_sbrk() mprotect failed");
+			perror("mmap_lowmem_sbrk() mprotect failed");
 		}
 	}
 	return mem;
 }
 #endif
 
-void *mmap_low32(void *addr, size_t length, int prot, int flags, int fd, off64_t offset) {
+void *mmap_lowmem(void *addr, size_t length, int prot, int flags, int fd, off64_t offset) {
 	void *mem;
 #if !USE_DLMALLOC
 	//printf("32BIT_mmap64(%p, %zd, 0x%x, 0x%x, %d, %zd)\n", addr, length, prot, flags, fd, offset);
@@ -179,7 +179,7 @@ void *mmap_low32(void *addr, size_t length, int prot, int flags, int fd, off64_t
 void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
 	INIT;
 	if(region_start != NULL && flags & MAP_32BIT && !(flags & MAP_FIXED) && fd < 0) {
-		return mmap_low32(addr, length, prot, flags, fd, offset);
+		return mmap_lowmem(addr, length, prot, flags, fd, offset);
 	}
 	return sys_mmap(addr, length, prot, flags, fd, offset);
 }
@@ -187,7 +187,7 @@ void *mmap(void *addr, size_t length, int prot, int flags, int fd, off_t offset)
 void *mmap64(void *addr, size_t length, int prot, int flags, int fd, off64_t offset) {
 	INIT;
 	if(region_start != NULL && flags & MAP_32BIT && !(flags & MAP_FIXED) && fd < 0) {
-		return mmap_low32(addr, length, prot, flags, fd, offset);
+		return mmap_lowmem(addr, length, prot, flags, fd, offset);
 	}
 	return sys_mmap64(addr, length, prot, flags, fd, offset);
 }

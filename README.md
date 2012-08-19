@@ -22,7 +22,7 @@ Compile
 Usage
 =====
 
-	$ LD_PRELOAD=mmap_low32.so luajit-2
+	$ LD_PRELOAD=mmap_lowmem.so luajit-2
 
 TODO
 ====
