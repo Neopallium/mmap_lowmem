@@ -26,7 +26,8 @@ Or link luajit-2 with `libmmap_lowmem.so`
 TODO
 ====
 
-* Allow using the system's mmap() for 32bit pages before falling back to custom page management when the system's mmap() fails.
+* Look for a way to change the start address of bss/program break to above the lower 4Gbytes of address space.
+* Handle `MREMAP_MAYMOVE` & `MREMAP_FIXED` flags for mremap wrapper.
 * Make thread-safe
 * Valgrind support.
 * Cleanup code.
