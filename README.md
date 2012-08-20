@@ -19,7 +19,7 @@ Usage
 
 Dynamically during run-time
 
-	$ LD_PRELOAD=libmmap_lowmem.so luajit-2
+	$ LD_PRELOAD="./libmmap_lowmem.so" luajit-2
 
 Or link luajit-2 with `libmmap_lowmem.so`
 
