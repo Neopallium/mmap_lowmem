@@ -12,7 +12,7 @@ The main use of this wrapper is to allow LuaJIT to use more then 1Gbyte of ram o
 Compile
 =======
 
-	./make.sh
+	$ make
 
 Usage
 =====
