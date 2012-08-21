@@ -23,10 +23,18 @@ Dynamically during run-time
 
 Or link luajit-2 with `libmmap_lowmem.so`
 
+Getting every last bit of the low 4Gbytes available
+===================================================
+
+Compiling the LuaJIT executable as a [position-independent executable](http://en.wikipedia.org/wiki/Position-independent_code) will move the program brk (used by malloc) to an address outside the low 4Gbytes.
+
+Use this make command to build LuaJIT:
+
+	$ make all LDFLAGS=" -pie " CFLAGS=" -fPIC "
+
 TODO
 ====
 
-* Look for a way to change the start address of bss/program break to above the lower 4Gbytes of address space.
 * Handle `MREMAP_MAYMOVE` & `MREMAP_FIXED` flags for mremap wrapper.
 * Make thread-safe
 * Valgrind support.

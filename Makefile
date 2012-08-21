@@ -4,6 +4,7 @@
 
 CFLAGS= -fPIC -O2 -Wall
 LDFLAGS= -shared
+LIBS= -ldl
 
 CC= gcc
 INSTALL= install -p
@@ -23,7 +24,7 @@ MMAP_HEADER= page_alloc.h lcommon.h
 all: $(MMAP_LIB)
 
 $(MMAP_LIB): $(MMAP_SRC) $(MMAP_HEADER)
-	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(MMAP_SRC) -ldl
+	$(CC) $(LDFLAGS) $(CFLAGS) -o $@ $(MMAP_SRC) $(LIBS)
 
 clean:
 	$(RM) $(MMAP_LIB)

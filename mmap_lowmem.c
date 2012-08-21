@@ -11,8 +11,6 @@
 #include <stddef.h>
 #include <dlfcn.h>
 #include <unistd.h>
-//#undef _GNU_SOURCE
-//#undef __USE_GNU
 #include <sys/mman.h>
 
 #include <stdarg.h>
@@ -29,19 +27,10 @@
 #define printf(...)
 #endif
 
-#define REGION_MAX (uint8_t *)(4 * GBYTE)
+#define LOW_4G (uint8_t *)(4 * GBYTE)
 
-//#define REGION_LENGTH (size_t)(2 * GBYTE)
-//#define REGION_LENGTH (size_t)((4 * GBYTE) - (256 * MBYTE))
-#define REGION_LENGTH (size_t)(REGION_MAX - region_start)
-#define REGION_CHECK(addr) (region_start <= (uint8_t *)(addr) && (uint8_t *)(addr) <= region_end)
-
-#define PAGE_ALIGN_CHECK(func, addr) do { \
-	if(((ptrdiff_t)(addr)) & (sys_pagesize - 1)) { \
-		printf("------- Badly aligned memory from " #func ": %p\n", (addr)); \
-		abort(); \
-	} \
-} while(0)
+#define REGION_CHECK(addr) \
+	(region_start != NULL && region_start <= (uint8_t *)(addr) && (uint8_t *)(addr) <= region_end)
 
 static int is_initialized = 0;
 
@@ -66,8 +55,10 @@ static PageAlloc *palloc = NULL;
 
 #if ENABLE_VERBOSE
 static void dump_stats() {
-	page_alloc_dump_stats(palloc);
-	getc(stdin);
+	if(palloc) {
+		page_alloc_dump_stats(palloc);
+		getc(stdin);
+	}
 }
 #endif
 
@@ -84,19 +75,25 @@ static void mmap_lowmem_init() {
 	sys_munmap = (munmap_t)dlsym(RTLD_NEXT, "munmap");
 	sys_pagesize = sysconf(_SC_PAGE_SIZE);
 
-	/* find the end of the bss/brk segment. */
-	region_start = sbrk(0);
-	/* page align region_start. */
-	region_start = ((uint8_t *)(((ptrdiff_t)region_start) & ~(sys_pagesize - 1)) + sys_pagesize);
+	/* find the end of the bss/brk segment (and make sure it is page-aligned). */
+	region_start = ((uint8_t *)(((ptrdiff_t)sbrk(0)) & ~(sys_pagesize - 1)) + sys_pagesize);
+	/* check if brk is inside the low 4Gbytes. */
+	if(region_start > LOW_4G) {
+		/* brk is outside the low 4Gbytes, start managed region at lowest posible address */
+		region_start = (uint8_t *)sys_pagesize;
+	}
 	start = sys_mmap(region_start, sys_pagesize, PROT_NONE, M_FLAGS, -1, 0);
-	if(start == MAP_FAILED || start > REGION_MAX) {
+	if(start == MAP_FAILED || start > LOW_4G) {
 		if(start != MAP_FAILED) {
 			int rc = sys_munmap(start, sys_pagesize);
 			if(rc != 0) {
 				perror("munmap() failed:");
 			}
 		}
-		printf("--- mmap failed: rc=%p, start=%p, end=%p\n", start, region_start, REGION_MAX);
+#if ENABLE_VERBOSE
+		printf("--- mmap failed: rc=%p, start=%p, end=%p\n", start, region_start, LOW_4G);
+#endif
+		/* fall back to using normal MAP_32BIT behavior. */
 		region_start = NULL;
 		start = NULL;
 		return;
@@ -104,10 +101,11 @@ static void mmap_lowmem_init() {
 	/* keep one guard page between region_start and end of bss/brk. */
 	start += sys_pagesize;
 	region_start = start;
-	region_end = REGION_MAX;
-	printf("--- got low-mem: len=0x%zx, start=%p, end=%p\n", REGION_LENGTH, region_start, region_end);
+	region_end = LOW_4G;
 	palloc = page_alloc_new(region_start, region_end - region_start);
 #if ENABLE_VERBOSE
+	printf("--- got low-mem: len=0x%zx, start=%p, end=%p\n",
+		(region_end - region_start), region_start, region_end);
 	getc(stdin);
 #endif
 }
