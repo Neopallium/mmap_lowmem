@@ -15,9 +15,17 @@ Usage
 
 Dynamically during run-time
 
+None thread-safe version:
+
 	$ LD_PRELOAD="./libmmap_lowmem.so" luajit-2
 
 Or link luajit-2 with `libmmap_lowmem.so`
+
+Thread-safe version:
+
+	$ LD_PRELOAD="./libmmap_lowmem_mt.so" luajit-2
+
+Or link luajit-2 with `libmmap_lowmem_mt.so`
 
 Getting every last bit of the low 4Gbytes available
 ===================================================
