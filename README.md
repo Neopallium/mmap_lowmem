@@ -5,10 +5,6 @@ This is a wrapper for mmap() to expand the address range of the `MAP_32BIT` flag
 
 The main use of this wrapper is to allow LuaJIT to use more then 1Gbyte of ram on Linux.  With this wrapper LuaJIT can use amost a full 4Gbytes of ram.
 
-**WARNING**
-**This is experimental code**
-**WARNING**
-
 Compile
 =======
 
@@ -36,7 +32,6 @@ TODO
 ====
 
 * Handle `MREMAP_MAYMOVE` & `MREMAP_FIXED` flags for mremap wrapper.
-* Make thread-safe
 * Valgrind support.
 * Cleanup code.
 
